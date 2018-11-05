@@ -1,21 +1,20 @@
-'use strict';
+"use strict";
 
-import * as chromeApi from './generated-google-u2f-api'
-
+import * as chromeApi from "./generated-google-u2f-api";
 
 // Feature detection (yes really)
-const isBrowser =
-	( typeof navigator !== 'undefined' ) && !!navigator.userAgent;
-const isSafari = isBrowser && navigator.userAgent.match( /Safari\// )
-	&& !navigator.userAgent.match( /Chrome\// );
-const isEDGE = isBrowser && navigator.userAgent.match( /Edge\/1[2345]/ );
+const isBrowser = typeof navigator !== "undefined" && !!navigator.userAgent;
+const isSafari =
+  isBrowser &&
+  navigator.userAgent.match(/Safari\//) &&
+  !navigator.userAgent.match(/Chrome\//);
+const isEDGE = isBrowser && navigator.userAgent.match(/Edge\/1[2345]/);
 
-interface API
-{
-	u2f: any;
+interface API {
+  u2f: any;
 }
 
-export declare type NotYetTyped = { [ key: string ]: any; };
+export declare type NotYetTyped = { [key: string]: any };
 export declare type RegisterRequest = NotYetTyped;
 export declare type SignRequest = NotYetTyped;
 export declare type RegisterResponse = NotYetTyped;
@@ -27,11 +26,13 @@ function getBackend( )
 	if ( !_backend )
 		_backend = getBackend_( );
 
-	return _backend.then(function ( backend ) {
-		if ( backend != undefined && backend.u2f )
-			return backend;
-		else
-			getBackend_( );
+	return _backend.then(function ( response ) {
+    if (!response || !response.u2f )
+    {
+      _backend = null;
+    }
+    
+    return response
 	});
 }
 
@@ -85,30 +86,29 @@ function getBackend_( )
 }
 
 export const ErrorCodes = {
-	OK: 0,
-	OTHER_ERROR: 1,
-	BAD_REQUEST: 2,
-	CONFIGURATION_UNSUPPORTED: 3,
-	DEVICE_INELIGIBLE: 4,
-	TIMEOUT: 5
+  OK: 0,
+  OTHER_ERROR: 1,
+  BAD_REQUEST: 2,
+  CONFIGURATION_UNSUPPORTED: 3,
+  DEVICE_INELIGIBLE: 4,
+  TIMEOUT: 5
 };
 
 export const ErrorNames = {
-	"0": "OK",
-	"1": "OTHER_ERROR",
-	"2": "BAD_REQUEST",
-	"3": "CONFIGURATION_UNSUPPORTED",
-	"4": "DEVICE_INELIGIBLE",
-	"5": "TIMEOUT"
+  "0": "OK",
+  "1": "OTHER_ERROR",
+  "2": "BAD_REQUEST",
+  "3": "CONFIGURATION_UNSUPPORTED",
+  "4": "DEVICE_INELIGIBLE",
+  "5": "TIMEOUT"
 };
 
-function makeError( msg, err )
-{
-	const code = err != null ? err.errorCode : 1; // Default to OTHER_ERROR
-	const type = ErrorNames[ '' + code ];
-	const error = new Error( msg );
-	( < any >error ).metaData = { type, code };
-	return error;
+function makeError(msg, err) {
+  const code = err != null ? err.errorCode : 1; // Default to OTHER_ERROR
+  const type = ErrorNames["" + code];
+  const error = new Error(msg);
+  (<any>error).metaData = { type, code };
+  return error;
 }
 
 export function isSupported( )
@@ -117,14 +117,12 @@ export function isSupported( )
 		.then( backend => !!backend.u2f );
 }
 
-function _ensureSupport( backend )
-{
-	if ( !backend.u2f )
-	{
-		if ( location.protocol === 'http:' )
-			throw new Error( "U2F isn't supported over http, only https" );
-		throw new Error( "U2F not supported" );
-	}
+function _ensureSupport(backend) {
+  if (!backend.u2f) {
+    if (location.protocol === "http:")
+      throw new Error("U2F isn't supported over http, only https");
+    throw new Error("U2F not supported");
+  }
 }
 
 export function ensureSupport( )
@@ -134,14 +132,14 @@ export function ensureSupport( )
 }
 
 export function register(
-	registerRequests: RegisterRequest | ReadonlyArray< RegisterRequest >,
-	signRequests: SignRequest | ReadonlyArray< SignRequest >,
-	timeout?: number
-): Promise< RegisterResponse >;
+  registerRequests: RegisterRequest | ReadonlyArray<RegisterRequest>,
+  signRequests: SignRequest | ReadonlyArray<SignRequest>,
+  timeout?: number
+): Promise<RegisterResponse>;
 export function register(
-	registerRequests: RegisterRequest | ReadonlyArray< RegisterRequest >,
-	timeout?: number
-): Promise< RegisterResponse >;
+  registerRequests: RegisterRequest | ReadonlyArray<RegisterRequest>,
+  timeout?: number
+): Promise<RegisterResponse>;
 export function register(
 	registerRequests: RegisterRequest | ReadonlyArray< RegisterRequest >,
 	signRequests?: SignRequest | ReadonlyArray< SignRequest > | number,
