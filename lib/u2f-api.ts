@@ -25,53 +25,63 @@ var _backend: Promise< API > = null;
 function getBackend( )
 {
 	if ( !_backend )
-		_backend = new Promise< API >( function( resolve, reject )
+		_backend = getBackend_( );
+
+	return _backend.then(function ( backend ) {
+		if ( backend != undefined && backend.u2f )
+			return backend;
+		else
+			getBackend_( );
+	});
+}
+
+function getBackend_( )
+{
+	return new Promise< API >( function( resolve, reject )
+	{
+		function notSupported( )
 		{
-			function notSupported( )
-			{
-				resolve( { u2f: null } );
-			}
+			resolve( { u2f: null } );
+		}
 
-			if ( !isBrowser )
-				return notSupported( );
+		if ( !isBrowser )
+			return notSupported( );
 
-			if ( isSafari )
-				// Safari doesn't support U2F, and the Safari-FIDO-U2F
-				// extension lacks full support (Multi-facet apps), so we
-				// block it until proper support.
-				return notSupported( );
+		if ( isSafari )
+			// Safari doesn't support U2F, and the Safari-FIDO-U2F
+			// extension lacks full support (Multi-facet apps), so we
+			// block it until proper support.
+			return notSupported( );
 
-			const hasNativeSupport =
-				( typeof ( < any >window ).u2f !== 'undefined' ) &&
-				( typeof ( < any >window ).u2f.sign === 'function' );
+		const hasNativeSupport =
+			( typeof ( < any >window ).u2f !== 'undefined' ) &&
+			( typeof ( < any >window ).u2f.sign === 'function' );
 
-			if ( hasNativeSupport )
-				return resolve( { u2f: ( < any >window ).u2f } );
+		if ( hasNativeSupport )
+			return resolve( { u2f: ( < any >window ).u2f } );
 
-			if ( isEDGE )
-				// We don't want to check for Google's extension hack on EDGE
-				// as it'll cause trouble (popups, etc)
-				return notSupported( );
+		if ( isEDGE )
+			// We don't want to check for Google's extension hack on EDGE
+			// as it'll cause trouble (popups, etc)
+			return notSupported( );
 
-			if ( location.protocol === 'http:' )
-				// U2F isn't supported over http, only https
-				return notSupported( );
+		if ( location.protocol === 'http:' )
+			// U2F isn't supported over http, only https
+			return notSupported( );
 
-			if ( typeof MessageChannel === 'undefined' )
-				// Unsupported browser, the chrome hack would throw
-				return notSupported( );
+		if ( typeof MessageChannel === 'undefined' )
+			// Unsupported browser, the chrome hack would throw
+			return notSupported( );
 
-			// Test for google extension support
-			chromeApi.isSupported( function( ok )
-			{
-				if ( ok )
-					resolve( { u2f: chromeApi } );
-				else
-					notSupported( );
-			} );
+		// Test for google extension support
+		chromeApi.isSupported( function( ok )
+				       {
+			if ( ok )
+				resolve( { u2f: chromeApi } );
+			else
+				notSupported( );
 		} );
-
-	return _backend;
+	} );
 }
 
 export const ErrorCodes = {
@@ -104,7 +114,7 @@ function makeError( msg, err )
 export function isSupported( )
 {
 	return getBackend( )
-	.then( backend => !!backend.u2f );
+		.then( backend => !!backend.u2f );
 }
 
 function _ensureSupport( backend )
@@ -120,7 +130,7 @@ function _ensureSupport( backend )
 export function ensureSupport( )
 {
 	return getBackend( )
-	.then( _ensureSupport );
+		.then( _ensureSupport );
 }
 
 export function register(
@@ -138,80 +148,80 @@ export function register(
 	timeout?: number
 )
 : Promise< RegisterResponse >
-{
-	if ( !Array.isArray( registerRequests ) )
-		registerRequests = [ registerRequests ];
-
-	if ( typeof signRequests === 'number' && typeof timeout === 'undefined' )
 	{
-		timeout = signRequests;
-		signRequests = null;
-	}
+		if ( !Array.isArray( registerRequests ) )
+			registerRequests = [ registerRequests ];
 
-	if ( !signRequests )
-		signRequests = [ ];
-
-	return getBackend( )
-	.then( function( backend )
-	{
-		_ensureSupport( backend );
-
-		const { u2f } = backend;
-
-		return new Promise< RegisterResponse >( function( resolve, reject )
+		if ( typeof signRequests === 'number' && typeof timeout === 'undefined' )
 		{
-			function callback( response )
-			{
-				if ( response.errorCode )
-					reject( makeError( "Registration failed", response ) );
-				else
-				{
-					delete response.errorCode;
-					resolve( response );
-				}
-			}
+			timeout = signRequests;
+			signRequests = null;
+		}
 
-			const appId = registerRequests[ 0 ].appId;
+		if ( !signRequests )
+			signRequests = [ ];
 
-			u2f.register(
-				appId, registerRequests, signRequests, callback, timeout );
-		} );
-	} );
-}
+		return getBackend( )
+			.then( function( backend )
+			       {
+				_ensureSupport( backend );
+
+				const { u2f } = backend;
+
+				return new Promise< RegisterResponse >( function( resolve, reject )
+									{
+					function callback( response )
+					{
+						if ( response.errorCode )
+							reject( makeError( "Registration failed", response ) );
+						else
+						{
+							delete response.errorCode;
+							resolve( response );
+						}
+					}
+
+					const appId = registerRequests[ 0 ].appId;
+
+					u2f.register(
+						appId, registerRequests, signRequests, callback, timeout );
+				} );
+			} );
+	}
 
 export function sign(
 	signRequests: SignRequest | ReadonlyArray< SignRequest >,
 	timeout?: number
 )
 : Promise< SignResponse >
-{
-	if ( !Array.isArray( signRequests ) )
-		signRequests = [ signRequests ];
-
-	return getBackend( )
-	.then( function( backend )
 	{
-		_ensureSupport( backend );
+		if ( !Array.isArray( signRequests ) )
+			signRequests = [ signRequests ];
 
-		const { u2f } = backend;
+		return getBackend( )
+			.then( function( backend )
+			       {
+				_ensureSupport( backend );
 
-		return new Promise< SignResponse >( function( resolve, reject )
-		{
-			function callback( response )
-			{
-				if ( response.errorCode )
-					reject( makeError( "Sign failed", response ) );
-				else
-				{
-					delete response.errorCode;
-					resolve( response );
-				}
-			}
+				const { u2f } = backend;
 
-			const appId = signRequests[ 0 ].appId;
-			const challenge = signRequests[ 0 ].challenge;
+				return new Promise< SignResponse >( function( resolve, reject )
+								    {
+					function callback( response )
+					{
+						if ( response.errorCode )
+							reject( makeError( "Sign failed", response ) );
+						else
+						{
+							delete response.errorCode;
+							resolve( response );
+						}
+					}
 
-			u2f.sign( appId, challenge, signRequests, callback, timeout );
-		} );
-	} );
-}
+					const appId = signRequests[ 0 ].appId;
+					const challenge = signRequests[ 0 ].challenge;
+
+					u2f.sign( appId, challenge, signRequests, callback, timeout );
+				} );
+			} );
+	}
