@@ -1,48 +1,57 @@
-'use strict';
+"use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 var chromeApi = require("./generated-google-u2f-api");
 // Feature detection (yes really)
-var isBrowser = (typeof navigator !== 'undefined') && !!navigator.userAgent;
-var isSafari = isBrowser && navigator.userAgent.match(/Safari\//)
-    && !navigator.userAgent.match(/Chrome\//);
+var isBrowser = typeof navigator !== "undefined" && !!navigator.userAgent;
+var isSafari = isBrowser &&
+    navigator.userAgent.match(/Safari\//) &&
+    !navigator.userAgent.match(/Chrome\//);
 var isEDGE = isBrowser && navigator.userAgent.match(/Edge\/1[2345]/);
 var _backend = null;
 function getBackend() {
     if (!_backend)
-        _backend = new Promise(function (resolve, reject) {
-            function notSupported() {
-                resolve({ u2f: null });
-            }
-            if (!isBrowser)
-                return notSupported();
-            if (isSafari)
-                // Safari doesn't support U2F, and the Safari-FIDO-U2F
-                // extension lacks full support (Multi-facet apps), so we
-                // block it until proper support.
-                return notSupported();
-            var hasNativeSupport = (typeof window.u2f !== 'undefined') &&
-                (typeof window.u2f.sign === 'function');
-            if (hasNativeSupport)
-                return resolve({ u2f: window.u2f });
-            if (isEDGE)
-                // We don't want to check for Google's extension hack on EDGE
-                // as it'll cause trouble (popups, etc)
-                return notSupported();
-            if (location.protocol === 'http:')
-                // U2F isn't supported over http, only https
-                return notSupported();
-            if (typeof MessageChannel === 'undefined')
-                // Unsupported browser, the chrome hack would throw
-                return notSupported();
-            // Test for google extension support
-            chromeApi.isSupported(function (ok) {
-                if (ok)
-                    resolve({ u2f: chromeApi });
-                else
-                    notSupported();
-            });
+        _backend = getBackend_();
+    return _backend.then(function (response) {
+        if (!response || !response.u2f) {
+            _backend = null;
+        }
+        return response;
+    });
+}
+function getBackend_() {
+    return new Promise(function (resolve, reject) {
+        function notSupported() {
+            resolve({ u2f: null });
+        }
+        if (!isBrowser)
+            return notSupported();
+        if (isSafari)
+            // Safari doesn't support U2F, and the Safari-FIDO-U2F
+            // extension lacks full support (Multi-facet apps), so we
+            // block it until proper support.
+            return notSupported();
+        var hasNativeSupport = (typeof window.u2f !== 'undefined') &&
+            (typeof window.u2f.sign === 'function');
+        if (hasNativeSupport)
+            return resolve({ u2f: window.u2f });
+        if (isEDGE)
+            // We don't want to check for Google's extension hack on EDGE
+            // as it'll cause trouble (popups, etc)
+            return notSupported();
+        if (location.protocol === 'http:')
+            // U2F isn't supported over http, only https
+            return notSupported();
+        if (typeof MessageChannel === 'undefined')
+            // Unsupported browser, the chrome hack would throw
+            return notSupported();
+        // Test for google extension support
+        chromeApi.isSupported(function (ok) {
+            if (ok)
+                resolve({ u2f: chromeApi });
+            else
+                notSupported();
         });
-    return _backend;
+    });
 }
 exports.ErrorCodes = {
     OK: 0,
@@ -62,7 +71,7 @@ exports.ErrorNames = {
 };
 function makeError(msg, err) {
     var code = err != null ? err.errorCode : 1; // Default to OTHER_ERROR
-    var type = exports.ErrorNames['' + code];
+    var type = exports.ErrorNames["" + code];
     var error = new Error(msg);
     error.metaData = { type: type, code: code };
     return error;
@@ -74,7 +83,7 @@ function isSupported() {
 exports.isSupported = isSupported;
 function _ensureSupport(backend) {
     if (!backend.u2f) {
-        if (location.protocol === 'http:')
+        if (location.protocol === "http:")
             throw new Error("U2F isn't supported over http, only https");
         throw new Error("U2F not supported");
     }
