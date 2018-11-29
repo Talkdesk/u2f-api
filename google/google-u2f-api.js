@@ -623,7 +623,9 @@ u2f.responseHandler_ = function(message) {
  * @param {function((u2f.Error|u2f.SignResponse))} callback
  * @param {number=} opt_timeoutSeconds
  */
-u2f.sign = function(appId, challenge, registeredKeys, callback, opt_timeoutSeconds) {
+u2f.sign = function (appId, challenge, registeredKeys, callback, opt_timeoutSeconds) {
+  console.log('SIGN');
+
   if (js_api_version === undefined) {
     // Send a message to get the extension to JS API version, then send the actual sign request.
     u2f.getApiVersion(
